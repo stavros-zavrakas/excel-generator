@@ -1,77 +1,43 @@
+const fs = require('fs');
 const excel = require('excel4node');
 
-// Create a new instance of a Workbook class
-const workbook = new excel.Workbook();
+const getFileList = require('./get-file-list');
 
-// Add Worksheets to the workbook
-const worksheet = workbook.addWorksheet('Buy order types');
-const worksheet1 = workbook.addWorksheet('Sell order types');
+logic();
 
-// Style for headers
-const style = workbook.createStyle({
-  font: {
-    color: '#EA3A14',
-    size: 18
-  },
-  numberFormat: '$#,##0.00; ($#,##0.00); -'
-});
+async function logic() {
+  const csvFiles = await getFileList();
+  console.log('csvFiles', csvFiles);
 
-const styleForData = workbook.createStyle({
-  font: {
-    color: '#47180E',
-    size: 12
-  },
-  alignment: {
-    wrapText: true,
-    horizontal: 'center',
-  },
-  numberFormat: '$#,##0.00; ($#,##0.00); -'
-});
+  // Create a new instance of a Workbook class
+  const workbook = new excel.Workbook();
 
-let buyOrderTypes=[
-{name:"buy",id:"1",comment:"Normal Buy Order"},
-
-{name:"sip",id:"2",comment:"Sip Buy Order"},
-
-{name:"buy",id:"3",comment:"ETF Buy Order"},
-]
-
-let sellOrderTypes=[
-  {name:"sell",id:"1",comment:"Normal Sell Order"},
-
-  {name:"emergencysell",id:"2",comment:"Emergency sell order"},
-  
-  {name:"coin",id:"3",comment:"Coin orders"},
-  {name:"jewellery",id:"4",comment:"Jewellery orders"},
-]
-
-
-//Tab 1 headers
-worksheet.cell(1,1).string('Type').style(style);
-worksheet.cell(1,2).string('Id').style(style);
-worksheet.cell(1,3).string('Description').style(style);
-
-
-//Tab 2 headers
-worksheet1.cell(1,1).string('Type').style(style);
-worksheet1.cell(1,2).string('Id').style(style);
-worksheet1.cell(1,3).string('Description').style(style);
-
-//Some logic
-function generateExcelSheet(array,worksheet){
-  let row=2;//Row starts from 2 as 1st row is for headers.
-  for(let i in array){
-    let o=1;
-    //This depends on numbers of columns to fill.
-    worksheet.cell(row,o).string(array[i].name).style(styleForData);
-    worksheet.cell(row,o+1).string(array[i].id).style(styleForData);
-    worksheet.cell(row,o+2).string(array[i].comment).style(styleForData);
-
-    row=row+1;
+  //Some logic
+  function generateExcelSheet(array, worksheet){
+    const rowArray = array.split('\r\n').filter(row => !!row);
+    rowArray.forEach((row, i) => {
+      if (row) {
+        const colsArray = row.split(';');
+        colsArray.forEach((col, j) => {
+          if(col) {
+            console.log('i-j', { i, j, col});
+            worksheet.cell(i + 1, j + 1).string(col);
+          }
+        });  
+      }
+    });
   }
+
+  csvFiles.forEach(csvFile => {
+    const firstCsv = csvFile;
+
+    const tabName = Object.keys(firstCsv)[0];
+  
+    // Add Worksheets to the workbook
+    const worksheet = workbook.addWorksheet(tabName);
+  
+    generateExcelSheet(firstCsv[tabName], worksheet);  
+  });
+
+  workbook.write('Excel.xlsx');
 }
-
-generateExcelSheet(buyOrderTypes,worksheet);
-
-generateExcelSheet(sellOrderTypes,worksheet1)
-workbook.write('Excel.xlsx');
